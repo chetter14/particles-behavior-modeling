@@ -3,18 +3,15 @@
 #include <cassert>
 #include "Particle.h"
 
-
 using namespace Constants;
 
 
 void assignStartValues(Particle (&)[particlesNumber]);
-void calculLennJonesPotent(Particle (&)[particlesNumber]);
+void calcLennJonesPotent(Particle (&)[particlesNumber], int);
 void moveParticle(Particle&);
 
 int main()
 {
-	//	below for particlesNumber = 2
-
 	Particle particles[particlesNumber]{ };
 	
 	assignStartValues(particles);
@@ -29,15 +26,15 @@ int main()
 
 		totalSystemEnergy = 0;
 
-		for (Particle& particle : particles)
+		for (int i = 0; i < particlesNumber; i++)
 		{
-			calculLennJonesPotent(particles);
-			totalSystemEnergy += particle.getEnergy();
-			moveParticle(particle);
-
-			if (i % gap == 0)
-				std::cout << particle << "\n";
+			calcLennJonesPotent(particles, i);
+			totalSystemEnergy += particles[i].getEnergy();
+			moveParticle(particles[i]);
 		}
+		
+		for (Particle& particle : particles)
+			particle.nullifyForcesAndEnergy();									//	to clear potential energies and forces (set them to zero)
 
 		if (i % gap == 0)
 			std::cout << "System total energy - " << totalSystemEnergy << "\n\n";
@@ -49,12 +46,12 @@ int main()
 
 void assignStartValues(Particle (&particles)[particlesNumber])
 {
-	double velProb = sqrt(2 * R * temp / molarMass);
+	double velProb = sqrt(2 * R * temp / molarMass) / sqrt(2);
 
 	//	for coordinates
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<int> uniformDist(boxMinCoordX + relativePosit, boxMaxCoordX - relativePosit);
+	std::uniform_int_distribution<int> uniformDist(boxMinCoord + relativePosit, boxMaxCoord - relativePosit);
 
 	//	for velocities
 	std::default_random_engine generator(rd());
@@ -63,20 +60,25 @@ void assignStartValues(Particle (&particles)[particlesNumber])
 	for (int i = 0; i < particlesNumber; i++)
 	{
 		particles[i].setCoordX(uniformDist(gen));
+		particles[i].setCoordY(uniformDist(gen));
+
 		particles[i].setVelX(normalDist(generator) * (i % 2 == 0 ? -1 : 1) );
+		particles[i].setVelY(normalDist(generator) * (i % 2 == 0 ? 1 : -1) );
 	}
 
 	for (int i = 0; i < particlesNumber; i++)
 	{
 		for (int j = i + 1; j < particlesNumber; j++)
 		{
-			double r = abs(particles[i].getCoordX() - particles[j].getCoordX());
-			assert(r > sigma, "Particles coordinates were generated too close");			//	validation that particles won't be in touch
+			double rx = abs(particles[i].getCoordX() - particles[j].getCoordX());
+			double ry = abs(particles[i].getCoordY() - particles[j].getCoordY());
+			assert(sqrt(rx * rx + ry * ry) > sigma, "Particles coordinates were generated too close");			//	validation that particles won't be in touch
 		}
 	}
 
-	for (const Particle& particle: particles)
+	for (Particle& particle : particles)
 		std::cout << "\n" << particle << "\n";
+		
 
 	std::cout << "\n";
 }
@@ -85,78 +87,116 @@ void assignStartValues(Particle (&particles)[particlesNumber])
 void moveParticle(Particle& particle)
 {
 	double newAccelX = particle.getForceX() / particleMass;
+	double newAccelY = particle.getForceY() / particleMass;
 	particle.setAccelX(newAccelX);
+	particle.setAccelY(newAccelY);
 
 	// std::cout << "\n" << "Adding to velocity - " << particle.getAccelX() * dt << "\n";
 
 	double newVelX = particle.getVelX() + particle.getAccelX() * dt;						//	velocity in m/s
+	double newVelY = particle.getVelY() + particle.getAccelY() * dt;
 
-	double passedDistance = newVelX * dt * 1e10;
-	double newCoordX = particle.getCoordX() + passedDistance + newAccelX * pow(dt, 2) / 2 * 1e10;		//	coordinates in angstroms
+	double passedDistanceX = newVelX * dt * 1e10;
+	double passedDistanceY = newVelY * dt * 1e10;
 
-	if (newCoordX > boxMaxCoordX)
+	double newCoordX = particle.getCoordX() + passedDistanceX + newAccelX * pow(dt, 2) / 2 * 1e10;		//	coordinates in angstroms
+	double newCoordY = particle.getCoordY() + passedDistanceY + newAccelY * pow(dt, 2) / 2 * 1e10;
+
+	if (newCoordX > boxMaxCoord)
 	{
-		newVelX = -newVelX;
-		newCoordX = boxMaxCoordX - abs(passedDistance / 2);
+		if (newVelX > 0)									//	if velocity vector is directed on right, then change it direction on left
+			newVelX = -newVelX;
+		newCoordX = boxMaxCoord - abs(passedDistanceX / 2);
 	}
-	else if (newCoordX < boxMinCoordX)
+	else if (newCoordX < boxMinCoord)
 	{
-		newVelX = -newVelX;
-		newCoordX = boxMinCoordX + abs(passedDistance / 2);
+		if (newVelX < 0)
+			newVelX = -newVelX;
+		newCoordX = boxMinCoord + abs(passedDistanceX / 2);
+	}
+
+	if (newCoordY > boxMaxCoord)
+	{
+		if (newVelY > 0)
+			newVelY = -newVelY;
+		newCoordY = boxMaxCoord - abs(passedDistanceY / 2);
+	}
+	else if (newCoordY < boxMinCoord)
+	{
+		if (newVelY < 0)
+			newVelY = -newVelY;
+		newCoordX = boxMinCoord + abs(passedDistanceY / 2);
 	}
 		
 	particle.setVelX(newVelX);
+	particle.setVelY(newVelY);
 	particle.setCoordX(newCoordX);
-
-	// std::cout << particle << "\n";
+	particle.setCoordY(newCoordY);
 }
 
-//	calculate the potential energy and forces between all the particles
-void calculLennJonesPotent(Particle (&particles)[particlesNumber])
+//	adjust forces of two particles (OX)
+void calcParticleForceX(double r, double forceX, Particle& particle, Particle& particleToCompare)
 {
-	for (int i = 1; i < particlesNumber; i++)
+	if (particle.getCoordX() > particleToCompare.getCoordX())
 	{
-		for (int j = 0; j < i; j++)
-		{
-			double particleOneCoordX = particles[i].getCoordX();
-			double particleTwoCoordX = particles[j].getCoordX();
-			double r = abs(particleOneCoordX - particleTwoCoordX);					//	distance between 
+		if (r < epsilonR)
+			particle.addForceX(forceX);
+		else
+			particle.addForceX(-forceX);
+	}
+	else
+	{
+		if (r < epsilonR)
+			particle.addForceX(-forceX);
+		else
+			particle.addForceX(forceX);
+	}
+}
 
-			double potentEnergy = abs(4 * epsilon * 1.60218e-19			/* convert to Joules */
+//	adjust forces of two particles (OY)
+void calcParticleForceY(double r, double forceY, Particle& particle, Particle& particleToCompare)
+{
+	if (particle.getCoordY() > particleToCompare.getCoordY())
+	{
+		if (r < epsilonR)
+			particle.addForceY(forceY);
+		else
+			particle.addForceY(-forceY);
+	}
+	else
+	{
+		if (r < epsilonR)
+			particle.addForceY(-forceY);
+		else
+			particle.addForceY(forceY);
+	}
+}
+
+//	calculate the potential energy and forces between the specified particle and others
+void calcLennJonesPotent(Particle (&particles)[particlesNumber], int particleIndex)
+{
+	for (int i = 0; i < particlesNumber; i++)
+	{
+		if (i != particleIndex)
+		{
+			double rx = abs(particles[particleIndex].getCoordX() - particles[i].getCoordX());		//	distance between them OX
+			double ry = abs(particles[particleIndex].getCoordY() - particles[i].getCoordY());		//	distance between them OY
+
+			double r = sqrt(rx * rx + ry * ry);
+
+			double potentEnergy = abs(4 * epsilon * evToJoules			/* convert to Joules */
 				* (pow(sigma / r, 12) - pow(sigma / r, 6)));
 
-			particles[j].setPotentialEnergy(potentEnergy);
-			particles[i].setPotentialEnergy(potentEnergy);
+			particles[particleIndex].addPotentEnergy(potentEnergy);
 
-			double force = abs(epsilon * 1.60218e-19			/* convert to Joules */
+			double force = abs(epsilon * evToJoules			/* convert to Joules */
 				* (48 * pow(sigma, 12) * pow(r, -13) * 1e10 - 24 * pow(sigma, 6) * pow(r, -7) * 1e10));			//	force in Newtons
 
-			if (particleOneCoordX > particleTwoCoordX)
-			{
-				if (r < epsilonR)
-				{
-					particles[i].setForceX(force);
-					particles[j].setForceX(-force);
-				}
-				else 
-				{
-					particles[i].setForceX(-force);
-					particles[j].setForceX(force);
-				}
-			}
-			else
-			{
-				if (r < epsilonR)
-				{
-					particles[i].setForceX(-force);
-					particles[j].setForceX(force);
-				}
-				else
-				{
-					particles[i].setForceX(force);
-					particles[j].setForceX(-force);
-				}
-			}		
+			double forceX = force * (rx / r);
+			double forceY = force * (ry / r);
+
+			calcParticleForceX(r, forceX, particles[particleIndex], particles[i]);					//	calculation on X-axis
+			calcParticleForceY(r, forceY, particles[particleIndex], particles[i]);					//	calculation on Y-axis
 		}
 	}
 }

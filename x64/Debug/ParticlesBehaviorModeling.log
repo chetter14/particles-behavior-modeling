@@ -1,5 +1,3 @@
-﻿  Particle.cpp
-  main.cpp
-C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\main.cpp(74,4): warning C4002: too many arguments for function-like macro invocation 'assert'
-  Generating Code...
+﻿  main.cpp
+C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\main.cpp(75,4): warning C4002: too many arguments for function-like macro invocation 'assert'
   ParticlesBehaviorModeling.vcxproj -> C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\x64\Debug\ParticlesBehaviorModeling.exe
