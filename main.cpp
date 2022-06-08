@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <random>
 #include <cassert>
 #include "Particle.h"
@@ -16,8 +17,16 @@ int main()
 	
 	assignStartValues(particles);
 
-	int gap = 50;
-	double totalSystemEnergy;	
+	/*std::ofstream energyFile;
+	energyFile.open("energy1.txt");*/
+
+	std::ofstream pressureFile;
+	pressureFile.open("pressure.txt", std::fstream::app);
+
+	int gap = 200;
+	double time = 0;
+
+	double totalSystemEnergy, totalParticlesPotentEnergy;
 	double totalRMSVels = 0;															//	RMD - root-mean-square
 
 	//	the main cycle
@@ -26,13 +35,14 @@ int main()
 		if (i % gap == 0)
 			std::cout << "\nStep number: " << i << "\n\n";
 
-		totalSystemEnergy = 0;
+		totalSystemEnergy = 0, totalParticlesPotentEnergy = 0;
 
 		//	iterate over all the particles to calculate one step
 		for (int i = 0; i < particlesNumber; i++)
 		{
 			calcLennJonesPotent(particles, i);
 			totalSystemEnergy += particles[i].getEnergy();
+			totalParticlesPotentEnergy += particles[i].getPotentialEnergy();
 			moveParticle(particles[i]);
 		}
 		
@@ -49,6 +59,11 @@ int main()
 
 		if (i % gap == 0)
 			std::cout << "System total energy - " << totalSystemEnergy << "\n\n";
+
+		time += dt;
+		/*if (i % gap == 0)
+			energyFile << time << "\t" << totalSystemEnergy << "\t" << totalParticlesPotentEnergy 
+				<< "\t" << totalSystemEnergy - totalParticlesPotentEnergy << "\n";*/		// total energy, potential, kinetic 
 	}
 
 	double averRMSVelocity = totalRMSVels / numberOfSteps;
@@ -56,6 +71,8 @@ int main()
 
 	double pressure = ((double)1 / 3) * (particlesNumber / volume) * particleMass * averRMSVelocity;
 	std::cout << "The pressure of the system - " << pressure << "\n";
+
+	pressureFile << temp << "\t" << pressure << "\n";
 
 	return 0;
 }
@@ -92,14 +109,9 @@ void assignStartValues(Particle (&particles)[particlesNumber])
 			double rx = abs(particles[i].getCoordX() - particles[j].getCoordX());
 			double ry = abs(particles[i].getCoordY() - particles[j].getCoordY());
 			double rz = abs(particles[i].getCoordZ() - particles[j].getCoordZ());
-			assert(sqrt(rx * rx + ry * ry + rz * rz) > sigma, "Particles coordinates were generated too close");			//	validation that particles won't be in touch
+			assert(sqrt(rx * rx + ry * ry + rz * rz) > sigma * 0.9, "Particles coordinates were generated too close");			//	validation that particles won't be in touch
 		}
 	}
-
-	/*for (Particle& particle : particles)
-		std::cout << "\n" << particle << "\n";
-
-	std::cout << "\n";*/
 }
 
 //	adjust forces of two particles (OX)
@@ -160,6 +172,7 @@ void calcParticleForceZ(double r, double forceZ, Particle& particle, Particle& p
 }
 
 //	calculate the potential energy and forces between the specified particle and others
+//	calculate Lennard Jones potential
 void calcLennJonesPotent(Particle (&particles)[particlesNumber], int particleIndex)
 {
 	for (int i = 0; i < particlesNumber; i++)
