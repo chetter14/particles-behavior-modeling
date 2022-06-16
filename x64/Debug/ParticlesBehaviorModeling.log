@@ -1,5 +1,7 @@
 ﻿  Particle.cpp
+C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\Constants.h(9,30): warning C4244: 'initializing': conversion from 'double' to 'const int', possible loss of data
   main.cpp
+C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\Constants.h(9,30): warning C4244: 'initializing': conversion from 'double' to 'const int', possible loss of data
 C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\main.cpp(112,4): warning C4002: too many arguments for function-like macro invocation 'assert'
   Generating Code...
   ParticlesBehaviorModeling.vcxproj -> C:\Users\Alexander\source\repos\ParticlesBehaviorModeling\x64\Debug\ParticlesBehaviorModeling.exe

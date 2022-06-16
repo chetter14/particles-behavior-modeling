@@ -17,13 +17,13 @@ int main()
 	
 	assignStartValues(particles);
 
-	/*std::ofstream energyFile;
-	energyFile.open("energy1.txt");*/
+	std::ofstream energyFile;
+	energyFile.open("energy1.txt");
 
 	std::ofstream pressureFile;
 	pressureFile.open("pressure.txt", std::fstream::app);
 
-	int gap = 200;
+	int gap = 400'000;
 	double time = 0;
 
 	double totalSystemEnergy, totalParticlesPotentEnergy;
@@ -61,9 +61,9 @@ int main()
 			std::cout << "System total energy - " << totalSystemEnergy << "\n\n";
 
 		time += dt;
-		/*if (i % gap == 0)
+		if (i % gap == 0)
 			energyFile << time << "\t" << totalSystemEnergy << "\t" << totalParticlesPotentEnergy 
-				<< "\t" << totalSystemEnergy - totalParticlesPotentEnergy << "\n";*/		// total energy, potential, kinetic 
+				<< "\t" << totalSystemEnergy - totalParticlesPotentEnergy << "\n";		// total energy, potential, kinetic 
 	}
 
 	double averRMSVelocity = totalRMSVels / numberOfSteps;
@@ -89,7 +89,7 @@ void assignStartValues(Particle (&particles)[particlesNumber])
 
 	//	for velocities
 	std::default_random_engine generator(rd());
-	std::normal_distribution<double> normalDist(velProb, velProb * 0.3);
+	std::normal_distribution<double> normalDist(velProb, velProb * 0.2);
 
 	for (int i = 0; i < particlesNumber; i++)
 	{
@@ -185,12 +185,12 @@ void calcLennJonesPotent(Particle (&particles)[particlesNumber], int particleInd
 
 			double r = sqrt(rx * rx + ry * ry + rz * rz);
 
-			double potentEnergy = abs(4 * epsilon * evToJoules			/* convert to Joules */
-				* (pow(sigma / r, 12) - pow(sigma / r, 6)));
+			double potentEnergy = 4 * epsilon * evToJoules			/* convert to Joules */
+				* (pow(sigma / r, 12) - pow(sigma / r, 6));
 
 			particles[particleIndex].addPotentEnergy(potentEnergy);
 
-			double force = abs(epsilon * evToJoules			/* convert to Joules */
+			double force = abs(2 * epsilon * evToJoules			/* convert to Joules */
 				* (48 * pow(sigma, 12) * pow(r, -13) * 1e10 - 24 * pow(sigma, 6) * pow(r, -7) * 1e10));			//	force in Newtons
 
 			double forceX = force * (rx / r);
